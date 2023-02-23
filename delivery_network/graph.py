@@ -37,11 +37,62 @@ class Graph:
     
 
     def get_path_with_power(self, src, dest, power):
-        raise NotImplementedError
+        """
+        Determines if a truck with power p can cover the path t (and returns a valid path if it's possible). 
+
+        Parameters: 
+        -----------
+        src: NodeType
+            Starting node of the path
+        dest: NodeType
+            End node of the path
+        power: numeric (int or float)
+            Power of the truck 
+
+        Returns:
+        -----------
+        path: list or None
+            A list of nodes in the path (including src and dest) if a valid path exists, None otherwise.
+        """
+        # Find all the connected components in the graph
+        components = self.connected_components()
+
+        # For each component, check if the path is entirely contained within it
+        for component in components:
+            if src in component and dest in component:
+                path, min_power = self.min_power(src, dest)
+                if min_power <= power:
+                    return path
+        # If no valid path exists, return None
+        return None
     
 
     def connected_components(self):
-        raise NotImplementedError
+        """
+        Returns a list of connected components in the graph.
+        """
+        visited = set()
+        components = []
+        for node in self.graph:
+            if node not in visited:
+                component = []
+                self._dfs(node, visited, component)
+                components.append(component)
+        return components
+
+    def _dfs(self, node, visited, component):
+        """
+        A recursive helper function for the connected_components method.
+        """
+        visited.add(node)
+        component.append(node)
+        for neighbor, _, _ in self.graph[node]:
+            if neighbor not in visited:
+                self._dfs(neighbor, visited, component)
+
+    def connected_components_set(self):
+        components = self.connected_components()
+        return set(map(frozenset, components))
 
 
     def connected_components_set(self):
@@ -78,4 +129,21 @@ def graph_from_file(filename):
     G: Graph
         An object of the class Graph with the graph from file_name.
     """
-    raise NotImplementedError
+    nodes = []
+    graph = Graph(nodes)
+
+    with open(filename) as f:
+        n, m = map(int, f.readline().split())
+        nodes = list(range(1, n + 1))
+        graph = Graph(nodes)
+
+        for line in f:
+            values = list(map(int, line.split()))
+            node1, node2, power_min = values[:3]
+            if len(values) == 4:
+                dist = values[3]
+            else:
+                dist = 1
+            graph.add_edge(node1, node2, power_min, dist)
+
+    return graph

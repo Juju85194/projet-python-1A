@@ -31,7 +31,9 @@ class Graph:
         dist: numeric (int or float), optional
             Distance between node1 and node2 on the edge. Default is 1.
         """
-        raise NotImplementedError
+        self.graph[node1].append((node2, power_min, dist))
+        self.graph[node2].append((node1, power_min, dist))
+        self.nb_edges += 1
     
 
     def get_path_with_power(self, src, dest, power):

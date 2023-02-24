@@ -1,4 +1,4 @@
-from graph import Graph, graph_from_file
+from graph import Graph, graph_from_file, visualize_graph
 
 
 data_path = "input/"
@@ -6,3 +6,6 @@ file_name = "network.01.in"
 
 g = graph_from_file(data_path + file_name)
 print(g)
+
+dot = visualize_graph(g, 1, 2)
+dot.render(directory='output', view=True)

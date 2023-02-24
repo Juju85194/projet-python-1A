@@ -1,3 +1,6 @@
+import heapq
+import graphviz
+
 class Graph:
     def __init__(self, nodes=[]):
         self.nodes = nodes
@@ -34,7 +37,6 @@ class Graph:
         self.graph[node1].append((node2, power_min, dist))
         self.graph[node2].append((node1, power_min, dist))
         self.nb_edges += 1
-    
 
     def get_path_with_power(self, src, dest, power):
         """
@@ -54,18 +56,39 @@ class Graph:
         path: list or None
             A list of nodes in the path (including src and dest) if a valid path exists, None otherwise.
         """
-        # Find all the connected components in the graph
-        components = self.connected_components()
+        # We use the Dijkstra algorithm to find the path with the shortest distance while maintaining the power condition
+        # Initialize distances to all nodes to infinity
+        distances = {node: float('inf') for node in self.graph}
+        distances[src] = 0
 
-        # For each component, check if the path is entirely contained within it
-        for component in components:
-            if src in component and dest in component:
-                path, min_power = self.min_power(src, dest)
-                if min_power <= power:
-                    return path
+        # Initialize priority queue and add the source node
+        queue = []
+        heapq.heappush(queue, (0, src, []))
+
+        # Main loop
+        while queue:
+            dist, node, path = heapq.heappop(queue)
+
+            # Check if we reached the destination
+            if node == dest:
+                path.append(node)
+                return path
+
+            # Check if we have already explored this node with a shorter distance
+            if dist > distances[node]:
+                continue
+
+            # Check if the power is sufficient to traverse the edge
+            for neighbor, power_min, edge_dist in self.graph[node]:
+                new_dist = dist + edge_dist
+                if new_dist < distances[neighbor] and power >= power_min:
+                    distances[neighbor] = new_dist
+                    new_path = path + [node]
+                    heapq.heappush(queue, (new_dist, neighbor, new_path))
+
         # If no valid path exists, return None
         return None
-    
+        
 
     def connected_components(self):
         """
@@ -106,7 +129,18 @@ class Graph:
         """
         Should return path, min_power. 
         """
-        raise NotImplementedError
+        # Compute the maximum possible power needed to traverse the graph
+        max_power = sum(power for _, power, _ in sum(self.graph.values(), []))
+        # Binary search to find the minimum required power
+        left, right = 1, max_power
+        while left < right:
+            mid = (left + right) // 2
+            if self.get_path_with_power(src, dest, mid):
+                right = mid
+            else:
+                left = mid + 1
+        # Return the path and the minimum power
+        return self.get_path_with_power(src, dest, left), left
 
 
 def graph_from_file(filename):
@@ -147,3 +181,24 @@ def graph_from_file(filename):
             graph.add_edge(node1, node2, power_min, dist)
 
     return graph
+
+def visualize_graph(self, src, dest):
+    dot = graphviz.Graph(comment='Truck problem')
+
+    # Add nodes and edges
+    for i in range(self.nb_nodes):
+        node = self.nodes[i]
+        dot.node(str(node))
+        for neighbor, power, distance in self.graph[node]:
+            dot.edge(str(node), str(neighbor), label=f"{power}/{neighbor}")
+    
+    # Highlight source and destination nodes
+    dot.node(str(src), style='filled', fillcolor='green')
+    dot.node(str(dest), style='filled', fillcolor='red')
+
+    # Highlight path
+    path, _ = self.min_power(src, dest)
+    for i in range(len(path) - 1):
+        dot.edge(str(path[i]), str(path[i+1]), color='blue')
+
+    return dot

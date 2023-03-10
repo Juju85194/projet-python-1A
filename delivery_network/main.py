@@ -60,6 +60,8 @@ def estimate_time(filename_route, filename_network):
 def estimate_time_mst(filename_route, filename_network):
     # Create the graph
     graph = graph_from_file(data_path + filename_network)
+    # Create the MST
+    mst = graph.kruskal()
     # Measure the time taken
     start_time = time.perf_counter()
     # Load the data from the route file
@@ -74,7 +76,7 @@ def estimate_time_mst(filename_route, filename_network):
     # Calculate the minimum power for each trip
     min_powers = []
     for trip in all_trip:
-        min_powers.append(graph.min_power_mst(trip[0], trip[1])[1])
+        min_powers.append(mst.min_power_mst(trip[0], trip[1])[1])
     # Write the minimum powers to a file
     filename_out = filename_route.replace(".in", ".out")
     with open('output/'+filename_out, "w") as f:

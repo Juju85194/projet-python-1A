@@ -1,29 +1,28 @@
 import heapq
 
+
 class Graph:
     def __init__(self, nodes=[]):
         self.nodes = nodes
         self.graph = dict([(n, []) for n in nodes])
         self.nb_nodes = len(nodes)
         self.nb_edges = 0
-    
 
     def __str__(self):
         """Prints the graph as a list of neighbors for each node (one per line)"""
         if not self.graph:
-            output = "The graph is empty"            
+            output = "The graph is empty"
         else:
             output = f"The graph has {self.nb_nodes} nodes and {self.nb_edges} edges.\n"
             for source, destination in self.graph.items():
                 output += f"{source}-->{destination}\n"
         return output
-    
 
     def add_edge(self, node1, node2, power_min, dist=1):
         """
-        Adds an edge to the graph. Graphs are not oriented, hence an edge is added to the adjacency list of both end nodes. 
+        Adds an edge to the graph. Graphs are not oriented, hence an edge is added to the adjacency list of both end nodes.
 
-        Parameters: 
+        Parameters:
         -----------
         node1: NodeType
             First end (node) of the edge
@@ -38,19 +37,18 @@ class Graph:
         self.graph[node2].append((node1, power_min, dist))
         self.nb_edges += 1
 
-
     def get_path_with_power(self, src, dest, power):
         """
-        Determines if a truck with power p can cover the path t (and returns a valid path if it's possible). 
+        Determines if a truck with power p can cover the path t (and returns a valid path if it's possible).
 
-        Parameters: 
+        Parameters:
         -----------
         src: NodeType
             Starting node of the path
         dest: NodeType
             End node of the path
         power: numeric (int or float)
-            Power of the truck 
+            Power of the truck
 
         Returns:
         -----------
@@ -86,10 +84,52 @@ class Graph:
                     distances[neighbor] = new_dist
                     new_path = path + [node]
                     heapq.heappush(queue, (new_dist, neighbor, new_path))
+        # If no valid path exists, return None
+        return None
+
+    def get_path_with_power_BFS(self, src, dest, power):
+        """
+        Determines if a truck with power p can cover the path t (and returns a valid path if it's possible).
+
+        Parameters:
+        -----------
+        src: NodeType
+            Starting node of the path
+        dest: NodeType
+            End node of the path
+        power: numeric (int or float)
+            Power of the truck
+
+        Returns:
+        -----------
+        path: list or None
+            A list of nodes in the path (including src and dest) if a valid path exists, None otherwise.
+        """
+        # We use the BFS algorithm to find the path with the minimum number of edges while maintaining the power condition
+        # Initialize visited and queue
+        visited = set()
+        queue = [(src, [])]
+        queue_start = 0
+
+        # Main loop
+        while queue_start < len(queue):
+            node, path = queue[queue_start]
+            queue_start += 1
+
+            # Check if we reached the destination
+            if node == dest:
+                path.append(node)
+                return path
+
+            # Check if the power is sufficient to traverse the edge
+            for neighbor, power_min, _ in self.graph[node]:
+                if neighbor not in visited and power >= power_min:
+                    visited.add(neighbor)
+                    new_path = path + [node]
+                    queue.append((neighbor, new_path))
 
         # If no valid path exists, return None
         return None
-        
 
     def connected_components(self):
         """
@@ -104,7 +144,6 @@ class Graph:
                 components.append(component)
         return components
 
-
     def _dfs(self, node, visited, component):
         """
         A recursive helper function for the connected_components method.
@@ -115,18 +154,16 @@ class Graph:
             if neighbor not in visited:
                 self._dfs(neighbor, visited, component)
 
-
     def connected_components_set(self):
         """
-        The result should be a set of frozensets (one per component), 
+        The result should be a set of frozensets (one per component),
         For instance, for network01.in: {frozenset({1, 2, 3}), frozenset({4, 5, 6, 7})}
         """
         return set(map(frozenset, self.connected_components()))
-    
 
     def min_power(self, src, dest):
         """
-        Should return path, min_power. 
+        Should return path, min_power.
         """
         # Compute the maximum possible power needed to traverse the graph
         max_power = sum(power for _, power, _ in sum(self.graph.values(), []))
@@ -140,7 +177,6 @@ class Graph:
                 left = mid + 1
         # Return the path and the minimum power
         return self.get_path_with_power(src, dest, left), left
-    
 
     def kruskal(self):
         """
@@ -180,18 +216,18 @@ class Graph:
                 union(u, v)
         
         return mst
-    
 
-    def min_power_mst(self, src, dest):
+    def min_power_mst(self , src, dest):
         """
-        Should return path, min_power. 
+        Should return path, min_power.
+
+        CAUTION: This method must only be used if the graph is a MST
         """
-        mst = self.kruskal()
-        path = mst.get_path_with_power(src, dest, float('inf'))
+        path = self.get_path_with_power_BFS(src, dest, float('inf'))
         if not path:
             return None
         # find maximum power of edges on path
-        power_on_edges = [power for u in mst.graph for v, power, _ in mst.graph[u] if u in path and v in path]
+        power_on_edges = [power for u in self.graph for v, power, _ in self.graph[u] if u in path and v in path]
         if not power_on_edges:
             return path, 0
         max_power = max(power_on_edges)
@@ -202,18 +238,18 @@ def graph_from_file(filename):
     """
     Reads a text file and returns the graph as an object of the Graph class.
 
-    The file should have the following format: 
+    The file should have the following format:
         The first line of the file is 'n m'
         The next m lines have 'node1 node2 power_min dist' or 'node1 node2 power_min' (if dist is missing, it will be set to 1 by default)
         The nodes (node1, node2) should be named 1..n
         All values are integers.
 
-    Parameters: 
+    Parameters:
     -----------
     filename: str
         The name of the file
 
-    Outputs: 
+    Outputs:
     -----------
     G: Graph
         An object of the class Graph with the graph from file_name.
@@ -236,4 +272,3 @@ def graph_from_file(filename):
             graph.add_edge(node1, node2, power_min, dist)
 
     return graph
-

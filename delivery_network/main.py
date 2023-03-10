@@ -15,7 +15,6 @@ import time
 def estimate_time(filename_route, filename_network):
     # Create the graph
     graph = graph_from_file(data_path + filename_network)
-    graph = graph.kruskal()
     # Load the data from the route file
     with open(data_path + filename_route, "r") as f:
         total_nb_trip = int(f.readline())
@@ -35,7 +34,7 @@ def estimate_time(filename_route, filename_network):
     times = []
     for trip in chosen_trip:
         start_time = time.perf_counter()
-        graph.min_power_mst(trip[0], trip[1])
+        graph.min_power(trip[0], trip[1])
         end_time = time.perf_counter()
         times.append(end_time - start_time)
     # Calculate the average time taken
@@ -45,9 +44,9 @@ def estimate_time(filename_route, filename_network):
     print(f"Estimated time for {filename_route}: {est_total_time:.2f} seconds")
 
 # estimate_time('routes.1.in', 'network.1.in')
-estimate_time('routes.2.in', 'network.2.in')
-estimate_time('routes.3.in', 'network.3.in')
-estimate_time('routes.4.in', 'network.4.in')
+# estimate_time('routes.2.in', 'network.2.in')
+# estimate_time('routes.3.in', 'network.3.in')
+# estimate_time('routes.4.in', 'network.4.in')
 # estimate_time('routes.5.in', 'network.5.in')
 # estimate_time('routes.6.in', 'network.6.in')
 # estimate_time('routes.7.in', 'network.7.in')

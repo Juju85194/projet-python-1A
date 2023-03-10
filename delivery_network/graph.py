@@ -1,5 +1,5 @@
-import heapq
 from collections import deque
+from heapq import heappop, heappush
 
 
 class Graph:
@@ -63,11 +63,11 @@ class Graph:
 
         # Initialize priority queue and add the source node
         queue = []
-        heapq.heappush(queue, (0, src, []))
+        heappush(queue, (0, src, []))
 
         # Main loop
         while queue:
-            dist, node, path = heapq.heappop(queue)
+            dist, node, path = heappop(queue)
 
             # Check if we reached the destination
             if node == dest:
@@ -84,7 +84,7 @@ class Graph:
                 if new_dist < distances[neighbor] and power >= power_min:
                     distances[neighbor] = new_dist
                     new_path = path + [node]
-                    heapq.heappush(queue, (new_dist, neighbor, new_path))
+                    heappush(queue, (new_dist, neighbor, new_path))
         # If no valid path exists, return None
         return None
 
@@ -217,21 +217,50 @@ class Graph:
         
         return mst
 
-    def min_power_mst(self , src, dest):
+    def min_power_mst(self, src, dest):
         """
         Should return path, min_power.
 
         CAUTION: This method must only be used if the graph is a MST
         """
-        path = self.get_path_with_power_BFS(src, dest, float('inf'))
-        if not path:
-            return None
-        # find maximum power of edges on path
-        power_on_edges = [power for u in self.graph for v, power, _ in self.graph[u] if u in path and v in path]
-        if not power_on_edges:
-            return path, 0
-        max_power = max(power_on_edges)
+        # find the path from src to dest in the MST using Dijkstra's algorithm
+        power = {src: 0}
+        prev = {}
+        visited = set()
+        heap = [(0, src)]
+        while heap:
+            p, u = heappop(heap)
+            if u == dest:
+                break
+            if u in visited:
+                continue
+            visited.add(u)
+            for v, w, _ in self.graph[u]:
+                if v not in visited:
+                    if v not in power or p + w < power[v]:
+                        power[v] = p + w
+                        prev[v] = u
+                        heappush(heap, (power[v], v))
+
+        # construct the path from src to dest
+        path = []
+        u = dest
+        while u in prev:
+            path.append(u)
+            u = prev[u]
+        path.append(src)
+        path.reverse()
+
+        # find the maximum power on the path
+        max_power = 0
+        for i in range(len(path) - 1):
+            u, v = path[i], path[i + 1]
+            for _, power, _ in self.graph[u]:
+                if power > max_power and v in prev and prev[v] == u:
+                    max_power = power
+        
         return path, max_power
+
 
 
 def graph_from_file(filename):

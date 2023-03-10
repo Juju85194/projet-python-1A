@@ -191,7 +191,10 @@ class Graph:
         if not path:
             return None
         # find maximum power of edges on path
-        max_power = max([power for u in mst.graph for v, power, _ in mst.graph[u] if u in path and v in path])
+        power_on_edges = [power for u in mst.graph for v, power, _ in mst.graph[u] if u in path and v in path]
+        if not power_on_edges:
+            return path, 0
+        max_power = max(power_on_edges)
         return path, max_power
 
 

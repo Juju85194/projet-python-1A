@@ -1,4 +1,5 @@
 import heapq
+from collections import deque
 
 
 class Graph:
@@ -108,13 +109,11 @@ class Graph:
         # We use the BFS algorithm to find the path with the minimum number of edges while maintaining the power condition
         # Initialize visited and queue
         visited = set()
-        queue = [(src, [])]
-        queue_start = 0
+        queue = deque([(src, [])])
 
         # Main loop
-        while queue_start < len(queue):
-            node, path = queue[queue_start]
-            queue_start += 1
+        while queue:
+            node, path = queue.popleft()
 
             # Check if we reached the destination
             if node == dest:
@@ -125,7 +124,8 @@ class Graph:
             for neighbor, power_min, _ in self.graph[node]:
                 if neighbor not in visited and power >= power_min:
                     visited.add(neighbor)
-                    new_path = path + [node]
+                    new_path = path.copy()
+                    new_path.append(node)
                     queue.append((neighbor, new_path))
 
         # If no valid path exists, return None

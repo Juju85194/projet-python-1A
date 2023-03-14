@@ -1,6 +1,6 @@
 from collections import deque
 from heapq import heappop, heappush
-
+from tqdm import tqdm
 
 class Graph:
     def __init__(self, nodes=[]):
@@ -8,6 +8,7 @@ class Graph:
         self.graph = dict([(n, []) for n in nodes])
         self.nb_nodes = len(nodes)
         self.nb_edges = 0
+        self.parent_dictionnary = None
 
     def __str__(self):
         """Prints the graph as a list of neighbors for each node (one per line)"""
@@ -217,49 +218,83 @@ class Graph:
         
         return mst
 
+    def dfs(self, start, parent=None, depth=0, depth_dict=None):
+        """
+        Performs a depth-first search from a starting node in a graph, storing the parent and depth of each node.
+        Parameters:
+        -----------
+        graph: Graph object
+            The graph to search.
+        start: int
+            The starting node.
+        parent: int, optional (default=None)
+            The parent node of the starting node. None if the starting node is the root of the tree.
+        depth: int, optional (default=0)
+            The depth of the starting node. 0 if the starting node is the root of the tree.
+        depth_dict: dict, optional (default=None)
+            The dictionary to store the depths of nodes. If None, a new dictionary is created.
+        Returns:
+        --------
+        A dictionary that maps each node to its parent and depth in the tree.
+        """
+        if depth_dict is None:
+            depth_dict = {}
+        depth_dict[start] = (parent, depth)
+        for neighbor, _, _ in self.graph[start]:
+            if neighbor != parent:
+                self.dfs(neighbor, start, depth+1, depth_dict)
+        return depth_dict
+
+    def get_path_to_lca(self, node1, node2, parent_dict):
+        """
+        Returns the path from node1 to the least common ancestor (LCA) of node1 and node2, and the path from the LCA to node2.
+        """
+        path1 = [node1]
+        path2 = [node2]
+        while node1 != node2:
+            if parent_dict[node1][1] < parent_dict[node2][1]:
+                node2 = parent_dict[node2][0]
+                path2.append(node2)
+            else:
+                node1 = parent_dict[node1][0]
+                path1.append(node1)
+        lca = node1
+        path = path1 + path2[::-1][1:]  # combine both paths and remove LCA from one of them
+        return path
+    
+    def edge_power(self, node1, node2):
+        """
+        Returns the power of the edge between node1 and node2 in the given graph.
+        """
+        for tpl in self.graph[node1]:
+            if tpl[0] == node2:
+                return tpl[1]
+        return None
+
+    def max_puissance_path(self, p) :
+
+        max_power = float('-inf')
+        for i in range(len(p)-1):
+            u = p[i]
+            v = p[i+1]
+            
+            max_power = max(max_power, self.edge_power(u, v))
+                        
+        return max_power
+
     def min_power_mst(self, src, dest):
         """
         Should return path, min_power.
 
         CAUTION: This method must only be used if the graph is a MST
         """
-        # find the path from src to dest in the MST using Dijkstra's algorithm
-        power = {src: 0}
-        prev = {}
-        visited = set()
-        heap = [(0, src)]
-        while heap:
-            p, u = heappop(heap)
-            if u == dest:
-                break
-            if u in visited:
-                continue
-            visited.add(u)
-            for v, w, _ in self.graph[u]:
-                if v not in visited:
-                    if v not in power or p + w < power[v]:
-                        power[v] = p + w
-                        prev[v] = u
-                        heappush(heap, (power[v], v))
+        if self.parent_dictionnary == None :
+            self.parent_dictionnary = self.dfs(1)
 
-        # construct the path from src to dest
-        path = []
-        u = dest
-        while u in prev:
-            path.append(u)
-            u = prev[u]
-        path.append(src)
-        path.reverse()
-
-        # find the maximum power on the path
-        max_power = 0
-        for i in range(len(path) - 1):
-            u, v = path[i], path[i + 1]
-            for _, power, _ in self.graph[u]:
-                if power > max_power and v in prev and prev[v] == u:
-                    max_power = power
+        p = self.get_path_to_lca(src, dest, self.parent_dictionnary)
+        max_power = self.max_puissance_path(p)
         
-        return path, max_power
+        return p, max_power
 
 
 
@@ -292,12 +327,12 @@ def graph_from_file(filename):
         graph = Graph(nodes)
 
         for line in f:
-            values = list(map(int, line.split()))
+            values = list(map(float, line.split()))
             node1, node2, power_min = values[:3]
             if len(values) == 4:
                 dist = values[3]
             else:
                 dist = 1
-            graph.add_edge(node1, node2, power_min, dist)
+            graph.add_edge(int(node1), int(node2), power_min, dist)
 
     return graph

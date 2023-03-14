@@ -1,5 +1,6 @@
 from graph import Graph, graph_from_file
 import numpy as np
+from tqdm import tqdm
 
 
 data_path = "input/"
@@ -71,11 +72,11 @@ def estimate_time_mst(filename_route, filename_network):
     # Create a list of trips
     all_trip = []
     for line in data:
-        src, dest, _ = map(int, line.split())
-        all_trip.append([src, dest])
+        src, dest, _ = map(float, line.split())
+        all_trip.append([int(src), int(dest)])
     # Calculate the minimum power for each trip
     min_powers = []
-    for trip in all_trip:
+    for trip in tqdm(all_trip):
         min_powers.append(mst.min_power_mst(trip[0], trip[1])[1])
     # Write the minimum powers to a file
     filename_out = filename_route.replace(".in", ".out")
@@ -95,4 +96,4 @@ def estimate_time_mst(filename_route, filename_network):
 # estimate_time_mst('routes.7.in', 'network.7.in')
 # estimate_time_mst('routes.8.in', 'network.8.in')
 # estimate_time_mst('routes.9.in', 'network.9.in')
-# estimate_time_mst('routes.10.in', 'network.10.in')
+estimate_time_mst('routes.10.in', 'network.10.in')

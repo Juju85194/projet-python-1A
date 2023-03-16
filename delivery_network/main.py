@@ -34,7 +34,7 @@ def estimate_time(filename_route, filename_network):
         chosen_trip.append(all_trip[i])
     # Measure the time taken for each chosen trip
     times = []
-    for trip in chosen_trip:
+    for trip in tqdm(chosen_trip):
         start_time = time.perf_counter()
         graph.min_power(trip[0], trip[1])
         end_time = time.perf_counter()
@@ -104,13 +104,29 @@ def estimate_time_mst(filename_route, filename_network):
 
 # A brute force solution to the problem
 
-def max_profit(graph,routes,trucks):
+def sort_routes_and_get_min_powers(graph, routes):
+    """Returns routes sorted by profit and the power required for each route
+
+    Args:
+        graph (Graph): graph of the network
+        routes (list): list of trips
+    """
+    # Sort trips by descending profit
+    routes = sorted(routes, key=lambda x: x[2], reverse=True)
+
+    # Compute required power for each trip
+    minimum_powers = [graph.min_power_mst(src,dest)[1] for src, dest, _ in routes]
+
+    return routes, minimum_powers
+
+def max_profit(routes,trucks,minimum_powers):
     """Returns the maximum profit achievable using the trucks, without budget constraint.
 
     Args:
         graph (Graph): graph of the network
-        routes (list): list of trips (src, dest, profit)
+        routes (list): list of trips (src, dest, profit) SORTED by descending profit
         trucks (int list): list of trucks (power, cost)
+        minimum_powers (list) : a list containing the minimum powers each trip
 
     Returns:
         int: maximum_profit
@@ -118,14 +134,8 @@ def max_profit(graph,routes,trucks):
     alocated_trips = []
     maximum_profit = 0
 
-    # Sort trips by descending profit
-    routes = sorted(routes, key=lambda x: x[2], reverse=True)
-
     # Sort trucks by power
     trucks = sorted(trucks)
-
-    # Compute required power for each trip
-    minimum_powers = [graph.min_power_mst(src,dest) for src, dest, _ in routes]
     
     # Main iteration
     while trucks:
@@ -135,16 +145,18 @@ def max_profit(graph,routes,trucks):
                 alocated_trips.append(i)
                 maximum_profit += routes[i][2]
                 break
-        
+    
     return maximum_profit
     
 
-def solve(graph, routes, trucks, budget):
+def solve(routes, trucks, budget, minimum_powers):
     """Brute force the exact solution of the problem
 
     Args:
+        routes (list): list of SORTED trips by profit
         trucks (list): list of trucks (power, cost)
         budget (int): budget
+        minimum_powers (list): list powers required for each trip
 
     Returns:
         list: collection of trucks
@@ -158,8 +170,8 @@ def solve(graph, routes, trucks, budget):
     # Get every combination of trucks
     for truck in trucks:
         new_combination = [combination + [truck] for combination in combinations]
-        combination.extend(new_combination)
-    
+        combinations.extend(new_combination)
+
     # At least one truck is chosen
     combinations.pop(0)
 
@@ -167,7 +179,7 @@ def solve(graph, routes, trucks, budget):
     for combination in combinations:
         # Compute the cost of the combination and its profit
         sum_cost = sum([cost for _, cost in combination])
-        profit = max_profit(graph, routes, combination)
+        profit = max_profit(routes, combination, minimum_powers)
 
         # Check if the cost doesn't exceed the budget and if the profit is larger
         if sum_cost <= budget and profit > best_profit:
@@ -218,12 +230,35 @@ def trucks_from_file(filename_truck):
         power, cost = map(float, line.split())
         trucks.append([power, cost])
     
-    return routes
+    return trucks
 
+def duplicate_trucks(trucks,budget):
+    """Duplicate trucks to account for unlimited stock
+
+    Args:
+        trucks (list): list of trucks
+        budget (int): budget
+
+    Returns:
+        list: list of trucks duplicated
+    """
+    total_cost = 0
+    duplicated_trucks = []
+
+    for truck in trucks:
+        while total_cost < budget:
+            total_cost += truck[1]
+            duplicated_trucks.append(truck)
+    
+    return duplicated_trucks
+
+b = 25*10e9
 g = graph_from_file(data_path + 'network.1.in')
 g = g.kruskal()
 routes = routes_from_file('routes.1.in')
 trucks = trucks_from_file('trucks.0.in')
-b = 25*10e9
+trucks = duplicate_trucks(trucks, b)
+routes, minimum_powers = sort_routes_and_get_min_powers(g, routes)
 
-solve(g, routes, trucks, b)
+solution = solve(routes, trucks, b, minimum_powers)
+print(solution)

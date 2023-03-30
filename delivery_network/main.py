@@ -124,6 +124,7 @@ def routes_from_file(filename_route):
     
     return routes
 
+
 def trucks_from_file(filename_truck):
     """Make a list of trucks from a file
 
@@ -147,22 +148,34 @@ def trucks_from_file(filename_truck):
     return trucks
 
 
+def min_powers_from_file(path):
+    """Returns a list of minimum powers
+
+    Args:
+        path (string): path to the file containing the minimum powers
+    """
+    minimum_powers = []
+    with open(path, "r") as f:
+        data = f.readlines()
+    for line in data:
+        power = float(line)
+        minimum_powers.append(power)
+    return minimum_powers
+
 # A brute force solution to the problem
 
-def sort_routes_and_get_min_powers(graph, routes):
+def sort_routes_and_min_powers(routes, minimum_powers):
     """Returns routes sorted by profit and the power required for each route
 
     Args:
-        graph (Graph): graph of the network
         routes (list): list of trips
+        minimum_powers (list): list of minimum powers
     """
-    # Sort trips by descending profit
-    routes = sorted(routes, key=lambda x: x[2], reverse=True)
-
-    # Compute required power for each trip
-    minimum_powers = [graph.min_power_mst(src,dest)[1] for src, dest, _ in routes]
-
+    routes, minimum_powers = zip(*sorted(zip(routes, minimum_powers), key=lambda x: x[0][2], reverse=True))
+    routes = list(routes)
+    minimum_powers = list(minimum_powers)
     return routes, minimum_powers
+
 
 def max_profit(routes,trucks,minimum_powers):
     """Returns the maximum profit achievable using the trucks, without budget constraint.
@@ -260,7 +273,7 @@ def duplicate_trucks(trucks,budget):
 # Greedy approach
 
 def truck_max_profit(routes, truck, minimum_powers):
-    """Returns the maximum profit achievable for a truck, and the trip
+    """Returns the maximum profit achievable for a truck, and the trip index
 
     Args:
         routes (list): list of routes SORTED by decreasing profit (src, dest, profit)
@@ -269,11 +282,15 @@ def truck_max_profit(routes, truck, minimum_powers):
     """
     for i in range(len(routes)):
         if truck[0] >= minimum_powers[i]:
-            return routes[i][2], routes[i]
+            return routes[i][2], i
+    # If no trip can be achieved with the current truck, the profit is set to 0
+    return 0, len(routes)-1
 
 
 def ratio(routes, trucks, minimum_powers):
-    """Returns a list of (truck, ratio, trip used to achieve such a ratio) sorted by ascending profit per unit of cost
+    """Returns a list of (truck, ratio, trip index used to achieve such a ratio) sorted by ascending profit per unit of cost.
+    If a truck has a ratio lesser than 1, it is removed from the list as it will not be able to generate enough profit for the
+    remaining trips.
 
     Args:
         routes (list): list of routes SORTED by decreasing profit
@@ -282,8 +299,13 @@ def ratio(routes, trucks, minimum_powers):
     """
     ratios = []
     for truck in trucks:
-        profit, trip = truck_max_profit(routes, truck, minimum_powers)
-        ratios.append((truck, profit / truck[1], trip))
+        profit, trip_index = truck_max_profit(routes, truck, minimum_powers)
+        r = profit/truck[1]
+        ratios.append((truck, r, trip_index))
+
+        # Remove the truck if it is no longer profitable
+        if r < 1:
+            trucks.remove(truck)
     ratios = sorted(ratios, key=lambda x : x[1])
     return ratios
 
@@ -309,21 +331,29 @@ def solve_greedy(routes, trucks, budget, minimum_powers):
         if r[1] < 1:
             break
         
-        total_cost += r[0][1]
-        solution.append((r[0], r[2]))
-        routes_not_visited.remove(r[2])
-        ratios = ratio(routes_not_visited, trucks, minimum_powers)
-    
+        if total_cost + r[0][1] <= budget:
+            total_cost += r[0][1]
+            solution.append((r[0], r[2]))
+            del routes_not_visited[r[2]]
+            del minimum_powers[r[2]]
+            ratios = ratio(routes_not_visited, trucks, minimum_powers)
+            print(str(total_cost/budget) + ' percent of the budget is spent')
+            continue
+        
+        # If the cost of the truck makes the total cost go higher than the budget, delete the truck (we can no longer buy it)
+        trucks.remove(r[0])
+
     return solution
 
 
 b = 25*10e9
 g = graph_from_file(data_path + 'network.1.in')
 g = g.kruskal()
-routes = routes_from_file('routes.3.in')
+routes = routes_from_file('routes.2.in')
 trucks = trucks_from_file('trucks.2.in')
+minimum_powers = min_powers_from_file('output/routes.2.out')
 
-routes, minimum_powers = sort_routes_and_get_min_powers(g, routes)
+routes, minimum_powers = sort_routes_and_min_powers(routes, minimum_powers)
 
 # Brute force
 # trucks = duplicate_trucks(trucks, b)
@@ -332,4 +362,4 @@ routes, minimum_powers = sort_routes_and_get_min_powers(g, routes)
 
 # Greedy approximation
 solution = solve_greedy(routes, trucks, b, minimum_powers)
-#print(solution)
+print(solution)

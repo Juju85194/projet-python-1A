@@ -102,6 +102,51 @@ def estimate_time_mst(filename_route, filename_network):
 
 ######################### Question 18 ############################
 
+def routes_from_file(filename_route):
+    """Make a list of routes from a file
+
+    Args:
+        filename_route (string): name of the file
+
+    Returns:
+        list: a list of routes (src, dest, profit)
+    """ 
+    routes = []
+
+    # Load the data from the route file
+    with open(data_path + filename_route, "r") as f:
+        f.readline()
+        data = f.readlines()
+    
+    for line in data:
+        src, dest, profit = map(float, line.split())
+        routes.append([int(src), int(dest), profit])
+    
+    return routes
+
+def trucks_from_file(filename_truck):
+    """Make a list of trucks from a file
+
+    Args:
+        filename_truck (string): name of the file
+
+    Returns:
+        list: a list of trucks (power, cost)
+    """ 
+    trucks = []
+
+    # Load the data from the truck file
+    with open(data_path + filename_truck, "r") as f:
+        f.readline()
+        data = f.readlines()
+    
+    for line in data:
+        power, cost = map(float, line.split())
+        trucks.append([power, cost])
+    
+    return trucks
+
+
 # A brute force solution to the problem
 
 def sort_routes_and_get_min_powers(graph, routes):
@@ -188,49 +233,6 @@ def solve(routes, trucks, budget, minimum_powers):
 
     return best_solution
 
-def routes_from_file(filename_route):
-    """Make a list of routes from a file
-
-    Args:
-        filename_route (string): name of the file
-
-    Returns:
-        list: a list of routes (src, dest, profit)
-    """ 
-    routes = []
-
-    # Load the data from the route file
-    with open(data_path + filename_route, "r") as f:
-        f.readline()
-        data = f.readlines()
-    
-    for line in data:
-        src, dest, profit = map(float, line.split())
-        routes.append([int(src), int(dest), profit])
-    
-    return routes
-
-def trucks_from_file(filename_truck):
-    """Make a list of trucks from a file
-
-    Args:
-        filename_truck (string): name of the file
-
-    Returns:
-        list: a list of trucks (power, cost)
-    """ 
-    trucks = []
-
-    # Load the data from the truck file
-    with open(data_path + filename_truck, "r") as f:
-        f.readline()
-        data = f.readlines()
-    
-    for line in data:
-        power, cost = map(float, line.split())
-        trucks.append([power, cost])
-    
-    return trucks
 
 def duplicate_trucks(trucks,budget):
     """Duplicate trucks to account for unlimited stock
@@ -252,13 +254,82 @@ def duplicate_trucks(trucks,budget):
     
     return duplicated_trucks
 
+# The previous solution is not able to find the answer in a decent span of time.
+
+
+# Greedy approach
+
+def truck_max_profit(routes, truck, minimum_powers):
+    """Returns the maximum profit achievable for a truck, and the trip
+
+    Args:
+        routes (list): list of routes SORTED by decreasing profit (src, dest, profit)
+        truck (tuple): (power, cost)
+        min_powers (list): list of minimum powers required for each trip
+    """
+    for i in range(len(routes)):
+        if truck[0] >= minimum_powers[i]:
+            return routes[i][2], routes[i]
+
+
+def ratio(routes, trucks, minimum_powers):
+    """Returns a list of (truck, ratio, trip used to achieve such a ratio) sorted by ascending profit per unit of cost
+
+    Args:
+        routes (list): list of routes SORTED by decreasing profit
+        trucks (list): list of trucks
+        min_powers (list): list of minimum power required for each trip
+    """
+    ratios = []
+    for truck in trucks:
+        profit, trip = truck_max_profit(routes, truck, minimum_powers)
+        ratios.append((truck, profit / truck[1], trip))
+    ratios = sorted(ratios, key=lambda x : x[1])
+    return ratios
+
+
+def solve_greedy(routes, trucks, budget, minimum_powers):
+    """Returns a solution to the problem using a greedy approach
+
+    Args:
+        routes (list): list of routes
+        trucks (list): list of trucks
+        budget (int): budget
+        min_powers (list): list of minimum power required for each trip
+    """
+    solution = []
+    routes_not_visited = routes.copy()
+    total_cost = 0
+    ratios = ratio(routes, trucks, minimum_powers)
+
+    while ratios:
+        r = ratios.pop()
+
+        # If the cost of every truck becomes greater than the profit, stop
+        if r[1] < 1:
+            break
+        
+        total_cost += r[0][1]
+        solution.append((r[0], r[2]))
+        routes_not_visited.remove(r[2])
+        ratios = ratio(routes_not_visited, trucks, minimum_powers)
+    
+    return solution
+
+
 b = 25*10e9
 g = graph_from_file(data_path + 'network.1.in')
 g = g.kruskal()
-routes = routes_from_file('routes.1.in')
-trucks = trucks_from_file('trucks.0.in')
-trucks = duplicate_trucks(trucks, b)
+routes = routes_from_file('routes.3.in')
+trucks = trucks_from_file('trucks.2.in')
+
 routes, minimum_powers = sort_routes_and_get_min_powers(g, routes)
 
-solution = solve(routes, trucks, b, minimum_powers)
-print(solution)
+# Brute force
+# trucks = duplicate_trucks(trucks, b)
+# solution = solve(routes, trucks, b, minimum_powers)
+# print(solution)
+
+# Greedy approximation
+solution = solve_greedy(routes, trucks, b, minimum_powers)
+#print(solution)

@@ -293,24 +293,28 @@ def trip_to_truck(trip_index, trucks , minimum_powers):
 
 
 
-
-
+import copy
 def simplified_trucks(trucks) :
     """Simplifies the list of trucks : we don't need less perfomant trucks which cost more money
     """
     temp_trucks = copy.deepcopy(trucks)
     for i, tup in enumerate(temp_trucks):
-        temp_trucks[i] = (i,) + tup
+        temp_trucks[i] = [i] + tup
 
+    
     valeur_stockee = temp_trucks[-1][2]  #Valeur du troisième élément du dernier tuple de la liste
 
     for i in range(len(temp_trucks)-2, -1, -1):  # Parcourt la liste en partant du deuxième tuple en partant de la fin
+
+        
         if temp_trucks[i][2] > valeur_stockee:
-            del ma_liste[i]
+            del temp_trucks[i]
         else:
             valeur_stockee = temp_trucks[i][2]
 
-    print(temp_trucks)
+    
+    return(temp_trucks)
+
 
 def ratio(routes, trucks, minimum_powers):
     """Returns a list of (trip_index, ratio, truck used to achieve such a ratio) sorted by ascending profit per unit of cost.
@@ -323,10 +327,10 @@ def ratio(routes, trucks, minimum_powers):
     ratios = []
     for index_route, route in enumerate(routes):
         profit = route[2]
-        truck = trip_to_truck(route, trucks, minimum_powers)
+        truck = trip_to_truck(index_route, trucks, minimum_powers)
         truck_cost = truck[2]
         r = profit/truck_cost
-        ratios.append((trip_index, r, truck))
+        ratios.append((route, r, truck))
 
 
     ratios = sorted(ratios, key=lambda x : x[1])
@@ -344,13 +348,15 @@ def solve_greedy(routes, trucks, budget, minimum_powers):
         trucks (list): list of trucks
         budget (int): budget
         min_powers (list): list of minimum power required for each trip
+    Output:
+        solution(list) : list of (truck, route)
     """
     solution = []
     ratios = ratio(routes, simplified_trucks(trucks), minimum_powers)
     rich = True
+    initial_budget = budget
 
-    while rich : #We are rich until we dont have enough money to buy the truck we wanted to be efficient.
-                 #We won't spend the rest of money but it is a very little amount compared to what we had at the beginning, so it doesn't really matter.
+    while budget>0 and ratios :
 
         r = ratios.pop()
 
@@ -359,21 +365,18 @@ def solve_greedy(routes, trucks, budget, minimum_powers):
         if r[2][2] <= budget:
             budget -= r[2][2]
             solution.append(((r[2][1], r[2][2]), r[0]))
-            print(str(r[2][2]) + 'is spent')
+        #if we don't have enough money, we just go on to the next trip
 
 
-        else :
-            rich = False
-
-    return solution
+    return (solution)
 
 
-b = 25*10e9
-g = graph_from_file(data_path + 'network.1.in')
+b = 25*1e9
+g = graph_from_file(data_path + 'network.10.in')
 g = g.kruskal()
-routes = routes_from_file('routes.2.in')
+routes = routes_from_file('routes.10.in')
 trucks = trucks_from_file('trucks.2.in')
-minimum_powers = min_powers_from_file('output/routes.2.out')
+minimum_powers = min_powers_from_file('output/routes.10.out')
 
 
 # Brute force
@@ -384,4 +387,5 @@ minimum_powers = min_powers_from_file('output/routes.2.out')
 # Greedy approximation
 solution = solve_greedy(routes, trucks, b, minimum_powers)
 print(solution)
+
 

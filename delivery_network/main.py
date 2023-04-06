@@ -104,53 +104,48 @@ def estimate_time_mst(filename_route, filename_network):
 
 def routes_from_file(filename_route):
     """Make a list of routes from a file
-
     Args:
         filename_route (string): name of the file
-
     Returns:
         list: a list of routes (src, dest, profit)
-    """ 
+    """
     routes = []
 
     # Load the data from the route file
     with open(data_path + filename_route, "r") as f:
         f.readline()
         data = f.readlines()
-    
+
     for line in data:
         src, dest, profit = map(float, line.split())
         routes.append([int(src), int(dest), profit])
-    
+
     return routes
 
 
 def trucks_from_file(filename_truck):
     """Make a list of trucks from a file
-
     Args:
         filename_truck (string): name of the file
-
     Returns:
         list: a list of trucks (power, cost)
-    """ 
+    """
     trucks = []
 
     # Load the data from the truck file
     with open(data_path + filename_truck, "r") as f:
         f.readline()
         data = f.readlines()
-    
+
     for line in data:
         power, cost = map(float, line.split())
         trucks.append([power, cost])
-    
+
     return trucks
 
 
 def min_powers_from_file(path):
     """Returns a list of minimum powers
-
     Args:
         path (string): path to the file containing the minimum powers
     """
@@ -166,7 +161,6 @@ def min_powers_from_file(path):
 
 def sort_routes_and_min_powers(routes, minimum_powers):
     """Returns routes sorted by profit and the power required for each route
-
     Args:
         routes (list): list of trips
         minimum_powers (list): list of minimum powers
@@ -179,13 +173,11 @@ def sort_routes_and_min_powers(routes, minimum_powers):
 
 def max_profit(routes,trucks,minimum_powers):
     """Returns the maximum profit achievable using the trucks, without budget constraint.
-
     Args:
         graph (Graph): graph of the network
         routes (list): list of trips (src, dest, profit) SORTED by descending profit
         trucks (int list): list of trucks (power, cost)
         minimum_powers (list) : a list containing the minimum powers each trip
-
     Returns:
         int: maximum_profit
     """
@@ -194,7 +186,7 @@ def max_profit(routes,trucks,minimum_powers):
 
     # Sort trucks by power
     trucks = sorted(trucks)
-    
+
     # Main iteration
     while trucks:
         truck = trucks.pop(0)
@@ -203,19 +195,17 @@ def max_profit(routes,trucks,minimum_powers):
                 alocated_trips.append(i)
                 maximum_profit += routes[i][2]
                 break
-    
+
     return maximum_profit
-    
+
 
 def solve(routes, trucks, budget, minimum_powers):
     """Brute force the exact solution of the problem
-
     Args:
         routes (list): list of SORTED trips by profit
         trucks (list): list of trucks (power, cost)
         budget (int): budget
         minimum_powers (list): list powers required for each trip
-
     Returns:
         list: collection of trucks
     """
@@ -249,11 +239,9 @@ def solve(routes, trucks, budget, minimum_powers):
 
 def duplicate_trucks(trucks,budget):
     """Duplicate trucks to account for unlimited stock
-
     Args:
         trucks (list): list of trucks
         budget (int): budget
-
     Returns:
         list: list of trucks duplicated
     """
@@ -264,7 +252,7 @@ def duplicate_trucks(trucks,budget):
         while total_cost < budget:
             total_cost += truck[1]
             duplicated_trucks.append(truck)
-    
+
     return duplicated_trucks
 
 # The previous solution is not able to find the answer in a decent span of time.
@@ -272,47 +260,85 @@ def duplicate_trucks(trucks,budget):
 
 # Greedy approach
 
-def truck_max_profit(routes, truck, minimum_powers):
-    """Returns the maximum profit achievable for a truck, and the trip index
-
+def trip_to_truck(trip_index, trucks , minimum_powers):
+    """Returns the best truck suited for a given trip_index
     Args:
-        routes (list): list of routes SORTED by decreasing profit (src, dest, profit)
-        truck (tuple): (power, cost)
+        trip_index (int) : index of the trip
+        trucks (list) : (indice_truck, power, cost)
         min_powers (list): list of minimum powers required for each trip
     """
-    for i in range(len(routes)):
-        if truck[0] >= minimum_powers[i]:
-            return routes[i][2], i
-    # If no trip can be achieved with the current truck, the profit is set to 0
-    return 0, len(routes)-1
+    power_needed = minimum_powers[trip_index]
 
+
+    if (power_needed>trucks[-1][1]) :
+        return (-1, 0, 0)
+
+    debut, fin = 0, len(trucks) - 1
+    while debut <= fin:
+        milieu = (debut + fin) // 2
+        if power_needed > trucks[milieu][1]:
+            debut = milieu + 1
+        else:
+            fin = milieu - 1
+
+    #on pourrait insérer à l'indice "début" pour garder une liste triée.
+    #si power_needed est exactement la puissance d'un caamion, on peut avoir ce camionà la position indice-1
+    #sinon, il faut regarder le camion  juste plus puissant que nécessaire, qui est donc à l'indice i.
+
+    if ((debut > 0) and (power_needed == trucks[debut-1][1])) :
+        return(trucks[debut-1])
+    else :
+        return(trucks[debut])
+
+
+
+
+
+
+def simplified_trucks(trucks) :
+    """Simplifies the list of trucks : we don't need less perfomant trucks which cost more money
+    """
+    temp_trucks = copy.deepcopy(trucks)
+    for i, tup in enumerate(temp_trucks):
+        temp_trucks[i] = (i,) + tup
+
+    valeur_stockee = temp_trucks[-1][2]  #Valeur du troisième élément du dernier tuple de la liste
+
+    for i in range(len(temp_trucks)-2, -1, -1):  # Parcourt la liste en partant du deuxième tuple en partant de la fin
+        if temp_trucks[i][2] > valeur_stockee:
+            del ma_liste[i]
+        else:
+            valeur_stockee = temp_trucks[i][2]
+
+    print(temp_trucks)
 
 def ratio(routes, trucks, minimum_powers):
-    """Returns a list of (truck, ratio, trip index used to achieve such a ratio) sorted by ascending profit per unit of cost.
-    If a truck has a ratio lesser than 1, it is removed from the list as it will not be able to generate enough profit for the
-    remaining trips.
+    """Returns a list of (trip_index, ratio, truck_index used to achieve such a ratio) sorted by ascending profit per unit of cost.
 
     Args:
-        routes (list): list of routes SORTED by decreasing profit
-        trucks (list): list of trucks
+        routes (list): list of routes
+        trucks (list): list of simplified trucks
         min_powers (list): list of minimum power required for each trip
     """
     ratios = []
-    for truck in trucks:
-        profit, trip_index = truck_max_profit(routes, truck, minimum_powers)
-        r = profit/truck[1]
+    for index_route, route in enumerate(routes):
+        profit = route[2]
+        truck = trip_to_truck(route, trucks, minimum_powers)
+        truck_cost = truck[2]
+        r = profit/truck_cost
         ratios.append((truck, r, trip_index))
 
-        # Remove the truck if it is no longer profitable
-        if r < 1:
-            trucks.remove(truck)
+
     ratios = sorted(ratios, key=lambda x : x[1])
     return ratios
 
 
+
+
+
+
 def solve_greedy(routes, trucks, budget, minimum_powers):
     """Returns a solution to the problem using a greedy approach
-
     Args:
         routes (list): list of routes
         trucks (list): list of trucks
@@ -320,28 +346,15 @@ def solve_greedy(routes, trucks, budget, minimum_powers):
         min_powers (list): list of minimum power required for each trip
     """
     solution = []
-    routes_not_visited = routes.copy()
     total_cost = 0
-    ratios = ratio(routes, trucks, minimum_powers)
+    ratios = ratio(routes, simplified_trucks(trucks), minimum_powers)
 
     while ratios:
         r = ratios.pop()
 
-        # If the cost of every truck becomes greater than the profit, stop
-        if r[1] < 1:
-            break
-        
+
         if total_cost + r[0][1] <= budget:
-            total_cost += r[0][1]
-            solution.append((r[0], r[2]))
-            del routes_not_visited[r[2]]
-            del minimum_powers[r[2]]
-            ratios = ratio(routes_not_visited, trucks, minimum_powers)
-            print(str(total_cost/budget) + ' percent of the budget is spent')
-            continue
-        
-        # If the cost of the truck makes the total cost go higher than the budget, delete the truck (we can no longer buy it)
-        trucks.remove(r[0])
+
 
     return solution
 
@@ -363,3 +376,4 @@ routes, minimum_powers = sort_routes_and_min_powers(routes, minimum_powers)
 # Greedy approximation
 solution = solve_greedy(routes, trucks, b, minimum_powers)
 print(solution)
+

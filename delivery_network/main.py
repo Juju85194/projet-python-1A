@@ -302,22 +302,18 @@ def simplified_trucks(trucks) :
     for i, tup in enumerate(temp_trucks):
         temp_trucks[i] = (i,) + tup
 
-    print(temp_trucks)
     valeur_stockee = temp_trucks[-1][2]  #Valeur du troisième élément du dernier tuple de la liste
 
     for i in range(len(temp_trucks)-2, -1, -1):  # Parcourt la liste en partant du deuxième tuple en partant de la fin
-
-        print(temp_trucks[i][2])
-        print(valeur_stockee)
         if temp_trucks[i][2] > valeur_stockee:
-            del temp_trucks[i]
+            del ma_liste[i]
         else:
             valeur_stockee = temp_trucks[i][2]
 
-    return(temp_trucks)
+    print(temp_trucks)
 
 def ratio(routes, trucks, minimum_powers):
-    """Returns a list of (trip_index, ratio, truck_index used to achieve such a ratio) sorted by ascending profit per unit of cost.
+    """Returns a list of (trip_index, ratio, truck used to achieve such a ratio) sorted by ascending profit per unit of cost.
 
     Args:
         routes (list): list of routes
@@ -330,7 +326,7 @@ def ratio(routes, trucks, minimum_powers):
         truck = trip_to_truck(route, trucks, minimum_powers)
         truck_cost = truck[2]
         r = profit/truck_cost
-        ratios.append((truck, r, trip_index))
+        ratios.append((trip_index, r, truck))
 
 
     ratios = sorted(ratios, key=lambda x : x[1])
@@ -350,15 +346,24 @@ def solve_greedy(routes, trucks, budget, minimum_powers):
         min_powers (list): list of minimum power required for each trip
     """
     solution = []
-    total_cost = 0
     ratios = ratio(routes, simplified_trucks(trucks), minimum_powers)
+    rich = True
 
-    while ratios:
+    while rich : #We are rich until we dont have enough money to buy the truck we wanted to be efficient.
+                 #We won't spend the rest of money but it is a very little amount compared to what we had at the beginning, so it doesn't really matter.
+
         r = ratios.pop()
 
 
-        if total_cost + r[0][1] <= budget:
 
+        if r[2][2] <= budget:
+            budget -= r[2][2]
+            solution.append(((r[2][1], r[2][2]), r[0]))
+            print(str(r[2][2]) + 'is spent')
+
+
+        else :
+            rich = False
 
     return solution
 
@@ -370,7 +375,6 @@ routes = routes_from_file('routes.2.in')
 trucks = trucks_from_file('trucks.2.in')
 minimum_powers = min_powers_from_file('output/routes.2.out')
 
-routes, minimum_powers = sort_routes_and_min_powers(routes, minimum_powers)
 
 # Brute force
 # trucks = duplicate_trucks(trucks, b)

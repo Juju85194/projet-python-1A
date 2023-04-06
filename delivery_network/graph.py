@@ -167,7 +167,7 @@ class Graph:
         Should return path, min_power.
         """
         # Compute the maximum possible power needed to traverse the graph
-        max_power = sum(power for _, power, _ in sum(self.graph.values(), []))
+        max_power = max(power for _, power, _ in sum(self.graph.values(), []))
         # Binary search to find the minimum required power
         left, right = 1, max_power
         while left < right:

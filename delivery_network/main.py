@@ -302,15 +302,19 @@ def simplified_trucks(trucks) :
     for i, tup in enumerate(temp_trucks):
         temp_trucks[i] = (i,) + tup
 
+    print(temp_trucks)
     valeur_stockee = temp_trucks[-1][2]  #Valeur du troisième élément du dernier tuple de la liste
 
     for i in range(len(temp_trucks)-2, -1, -1):  # Parcourt la liste en partant du deuxième tuple en partant de la fin
+
+        print(temp_trucks[i][2])
+        print(valeur_stockee)
         if temp_trucks[i][2] > valeur_stockee:
-            del ma_liste[i]
+            del temp_trucks[i]
         else:
             valeur_stockee = temp_trucks[i][2]
 
-    print(temp_trucks)
+    return(temp_trucks)
 
 def ratio(routes, trucks, minimum_powers):
     """Returns a list of (trip_index, ratio, truck_index used to achieve such a ratio) sorted by ascending profit per unit of cost.

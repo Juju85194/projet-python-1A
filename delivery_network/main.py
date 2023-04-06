@@ -2,6 +2,7 @@ from graph import Graph, graph_from_file
 import numpy as np
 from tqdm import tqdm
 import numpy as np
+import copy
 
 
 data_path = "input/"
@@ -218,7 +219,8 @@ def solve(routes, trucks, budget, minimum_powers):
     # Get every combination of trucks
     for truck in trucks:
         new_combination = [combination + [truck] for combination in combinations]
-        combinations.extend(new_combination)
+        if len(new_combination) <= len(routes):
+            combinations.extend(new_combination)
 
     # At least one truck is chosen
     combinations.pop(0)
@@ -252,6 +254,7 @@ def duplicate_trucks(trucks,budget):
         while total_cost < budget:
             total_cost += truck[1]
             duplicated_trucks.append(truck)
+        total_cost = 0
 
     return duplicated_trucks
 
@@ -264,15 +267,16 @@ def trip_to_truck(trip_index, trucks , minimum_powers):
     """Returns the best truck suited for a given trip_index
     Args:
         trip_index (int) : index of the trip
-        trucks (list) : (indice_truck, power, cost)
+        trucks (list) : (indice_truck, power, cost). List of simplified trucks.
         min_powers (list): list of minimum powers required for each trip
     """
     power_needed = minimum_powers[trip_index]
 
-
-    if (power_needed>trucks[-1][1]) :
+    # If the most powerful truck isn't able to handle the trip, return (-1, 0, 0)
+    if power_needed > trucks[-1][1] :
         return (-1, 0, 0)
 
+    # Find the best truck using binary search
     debut, fin = 0, len(trucks) - 1
     while debut <= fin:
         milieu = (debut + fin) // 2
@@ -281,39 +285,32 @@ def trip_to_truck(trip_index, trucks , minimum_powers):
         else:
             fin = milieu - 1
 
-    #on pourrait insérer à l'indice "début" pour garder une liste triée.
-    #si power_needed est exactement la puissance d'un caamion, on peut avoir ce camionà la position indice-1
-    #sinon, il faut regarder le camion  juste plus puissant que nécessaire, qui est donc à l'indice i.
-
-    if ((debut > 0) and (power_needed == trucks[debut-1][1])) :
-        return(trucks[debut-1])
+    if debut > 0 and power_needed == trucks[debut-1][1] :
+        return trucks[debut-1]
     else :
-        return(trucks[debut])
+        return trucks[debut]
 
 
-
-
-import copy
 def simplified_trucks(trucks) :
-    """Simplifies the list of trucks : we don't need less perfomant trucks which cost more money
     """
+    Simplifies the list of trucks : trucks that are less powerful but more expensive than other trucks are deleted.
+    Note: trucks are already sorted by increasing power in truck files.
+    """
+    # Create a copy of trucks and add indexes
     temp_trucks = copy.deepcopy(trucks)
     for i, tup in enumerate(temp_trucks):
         temp_trucks[i] = [i] + tup
-
     
-    valeur_stockee = temp_trucks[-1][2]  #Valeur du troisième élément du dernier tuple de la liste
+    current_cost = temp_trucks[-1][2]  # The cost of the most powerful truck
 
-    for i in range(len(temp_trucks)-2, -1, -1):  # Parcourt la liste en partant du deuxième tuple en partant de la fin
-
-        
-        if temp_trucks[i][2] > valeur_stockee:
+    # Iterate over the trucks in reverse order (except the most powerful truck)
+    for i in range(len(temp_trucks)-2, -1, -1):
+        if temp_trucks[i][2] > current_cost:
             del temp_trucks[i]
         else:
-            valeur_stockee = temp_trucks[i][2]
+            current_cost = temp_trucks[i][2]
 
-    
-    return(temp_trucks)
+    return temp_trucks
 
 
 def ratio(routes, trucks, minimum_powers):
@@ -332,13 +329,8 @@ def ratio(routes, trucks, minimum_powers):
         r = profit/truck_cost
         ratios.append((route, r, truck))
 
-
-    ratios = sorted(ratios, key=lambda x : x[1])
+    ratios = sorted(ratios, key=lambda x: x[1])
     return ratios
-
-
-
-
 
 
 def solve_greedy(routes, trucks, budget, minimum_powers):
@@ -353,22 +345,18 @@ def solve_greedy(routes, trucks, budget, minimum_powers):
     """
     solution = []
     ratios = ratio(routes, simplified_trucks(trucks), minimum_powers)
-    rich = True
-    initial_budget = budget
+    updated_budget = budget
 
-    while budget>0 and ratios :
+    while updated_budget > 0 and ratios:
 
         r = ratios.pop()
 
-
-
-        if r[2][2] <= budget:
-            budget -= r[2][2]
+        if r[2][2] <= updated_budget:
+            updated_budget -= r[2][2]
             solution.append(((r[2][1], r[2][2]), r[0]))
-        #if we don't have enough money, we just go on to the next trip
+        # If we don't have enough money, we just go on to the next trip
 
-
-    return (solution)
+    return solution
 
 
 b = 25*1e9
@@ -387,5 +375,3 @@ minimum_powers = min_powers_from_file('output/routes.10.out')
 # Greedy approximation
 solution = solve_greedy(routes, trucks, b, minimum_powers)
 print(solution)
-
-
